@@ -1,0 +1,87 @@
+- name: Nvidia runpm testing
+  hosts: all
+  become: true
+  tasks:
+    - name: blacklist nouveau
+      kernel_blacklist:
+        blacklist_file: /etc/modprobe.d/nouveau-blacklist-ansible.conf
+        name: nouveau, nvidia, nvidia_drm, nvidia_modeset, nvidia_uvm
+        state: present
+
+    - name: negativo17
+      get_url:
+        url: https://negativo17.org/repos/fedora-nvidia.repo
+        dest: /etc/yum.repos.d/fedora-nvidia.repo
+
+    - name: verify nvidia is installed
+      register: installed
+      dnf: 
+        name: akmod-nvidia, nvidia-driver
+        state: latest
+
+    - name: akmods
+      command:
+        cmd: akmods
+
+    - name: check if nouveau is loaded
+      register: nouveau
+      stat:
+        path: /sys/module/nouveau/
+
+    - name: Reboot after installation
+      reboot:
+      when: installed is changed or (nouveau.stat.isdir is defined and nouveau.stat.isdir)
+
+    - name: nvidia loded
+      modprobe:
+        name: nvidia
+        params: NVreg_DynamicPowerManagement=0x02
+
+    - name: check if audio device exists
+      register: audio
+      stat:
+        path: '/sys/bus/pci/devices/0000:01:00.1/power/control'
+
+    - name: verify runpm GPU enabled
+      register: gpu_runpm
+      lineinfile:
+        path: '/sys/bus/pci/devices/0000:01:00.0/power/control'
+        line: auto
+      check_mode: yes
+
+    - name: verify runpm HDA enabled
+      when: audio.stat.exists
+      register: hda_runpm
+      lineinfile:
+        path: '/sys/bus/pci/devices/0000:01:00.1/power/control'
+        line: auto
+      check_mode: yes
+
+    - name: Fail on runpm not enabled
+      when: gpu_runpm is changed or (hda_runpm is defined and hda_runpm is changed)
+      fail:
+        msg: Runpm not enabled on Nvidia
+
+    - name: Wait for GPU to suspend
+      pause:
+        seconds: 10
+
+    - name: verify GPU suspended
+      register: gpu_suspended
+      lineinfile:
+        path: '/sys/bus/pci/devices/0000:01:00.0/power/runtime_status'
+        line: suspended
+      check_mode: yes
+
+    - name: verify HDA suspended
+      when: audio.stat.exists
+      register: hda_suspended
+      lineinfile:
+        path: '/sys/bus/pci/devices/0000:01:00.1/power/runtime_status'
+        line: suspended
+      check_mode: yes
+
+    - name: Fail on GPU not suspended
+      when: gpu_suspended is changed or (hda_suspended is defined and hda_suspended is changed)
+      fail:
+        msg: GPU not suspended
