@@ -5,7 +5,31 @@
     - name: blacklist nouveau
       kernel_blacklist:
         blacklist_file: /etc/modprobe.d/nouveau-blacklist-ansible.conf
-        name: nouveau, nvidia, nvidia_drm, nvidia_modeset, nvidia_uvm
+        name: nouveau
+        state: present
+
+    - name: blacklist nvidia
+      kernel_blacklist:
+        blacklist_file: /etc/modprobe.d/nouveau-blacklist-ansible.conf
+        name: nvidia
+        state: present
+
+    - name: blacklist nvidia-drm
+      kernel_blacklist:
+        blacklist_file: /etc/modprobe.d/nouveau-blacklist-ansible.conf
+        name: nvidia-drm
+        state: present
+
+    - name: blacklist nvidia-modeset
+      kernel_blacklist:
+        blacklist_file: /etc/modprobe.d/nouveau-blacklist-ansible.conf
+        name: nvidia-modeset
+        state: present
+
+    - name: blacklist nvidia-uvm
+      kernel_blacklist:
+        blacklist_file: /etc/modprobe.d/nouveau-blacklist-ansible.conf
+        name: nvidia-uvm
         state: present
 
     - name: negativo17
